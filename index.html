@@ -295,6 +295,7 @@
             <button class="mode-btn active" onclick="setMode('nitwood')">Nitwood (First Letters)</button>
             <button class="mode-btn" onclick="setMode('cue-only')">Cue Lines Only</button>
             <button class="mode-btn" onclick="setMode('rehearsal')">Rehearsal with Partner</button>
+            <button class="mode-btn" onclick="toggleIncorrectOnly()" id="incorrect-filter-btn">Review Incorrect Only</button>
         </div>
         
         <div class="stats">
@@ -340,9 +341,11 @@
 
     <script>
         let cards = [];
+        let allCards = []; // Store all cards
         let currentIndex = 0;
         let isFlipped = false;
         let mode = 'nitwood';
+        let showIncorrectOnly = false;
         let stats = {
             correct: 0,
             incorrect: 0
@@ -2947,8 +2950,41 @@
         }
         
         function initializeApp() {
+            allCards = cards; // Store all cards
             document.getElementById('total-cards').textContent = cards.length;
             loadStats();
+            displayCard();
+        }
+        
+        function toggleIncorrectOnly() {
+            showIncorrectOnly = !showIncorrectOnly;
+            const btn = document.getElementById('incorrect-filter-btn');
+            
+            if (showIncorrectOnly) {
+                // Filter to only incorrect cards
+                cards = allCards.filter(card => card.correct === false);
+                btn.classList.add('active');
+                btn.textContent = 'Show All Cards';
+                
+                if (cards.length === 0) {
+                    alert('No incorrect cards yet! Mark some cards as incorrect first.');
+                    showIncorrectOnly = false;
+                    cards = allCards;
+                    btn.classList.remove('active');
+                    btn.textContent = 'Review Incorrect Only';
+                    return;
+                }
+            } else {
+                // Show all cards
+                cards = allCards;
+                btn.classList.remove('active');
+                btn.textContent = 'Review Incorrect Only';
+            }
+            
+            // Reset to first card
+            currentIndex = 0;
+            isFlipped = false;
+            document.getElementById('total-cards').textContent = cards.length;
             displayCard();
         }
         
@@ -3120,12 +3156,30 @@
             saveStats();
             updateStatsDisplay();
             
-            // Auto-advance to next card
-            setTimeout(() => {
-                if (currentIndex < cards.length - 1) {
-                    nextCard();
+            // If showing incorrect only and card was marked correct, remove it from view
+            if (showIncorrectOnly && isCorrect) {
+                cards = allCards.filter(card => card.correct === false);
+                if (cards.length === 0) {
+                    alert('All incorrect cards have been corrected! Switching to all cards view.');
+                    showIncorrectOnly = false;
+                    cards = allCards;
+                    document.getElementById('incorrect-filter-btn').classList.remove('active');
+                    document.getElementById('incorrect-filter-btn').textContent = 'Review Incorrect Only';
                 }
-            }, 500);
+                if (currentIndex >= cards.length) {
+                    currentIndex = cards.length - 1;
+                }
+                document.getElementById('total-cards').textContent = cards.length;
+                isFlipped = false;
+                displayCard();
+            } else {
+                // Auto-advance to next card
+                setTimeout(() => {
+                    if (currentIndex < cards.length - 1) {
+                        nextCard();
+                    }
+                }, 500);
+            }
         }
         
         function updateStatsDisplay() {
